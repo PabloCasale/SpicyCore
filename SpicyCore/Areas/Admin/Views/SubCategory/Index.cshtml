@@ -18,7 +18,8 @@
     <div>
         @if (Model.Count() > 0)
         {
-            <table class="table table-triped border">
+        <table class="table table-striped">
+            <thead>
                 <tr class="table-secondary">
                     <th>
                         @Html.DisplayNameFor(x => x.Name)
@@ -27,22 +28,25 @@
                         @Html.DisplayNameFor(x => x.Categories.Name)
                     </th>
                     <th></th>
-                    <th></th>
+                    <th>Options</th>
                 </tr>
+            </thead>
+            <tbody>
                 @foreach (var item in Model)
                 {
-            <tr>
-                <td>
-                    @Html.DisplayFor(x => item.Name)
-                </td>
-                <td>
-                    @Html.DisplayFor(x => item.Categories.Name)
-                </td>
-                <td>
-                    <partial name="_TableButtonPartial" model="item.Id" />
-                </td>
-            </tr>
-                }
+                    <tr>
+                        <td>
+                            @Html.DisplayFor(x => item.Name)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(x => item.Categories.Name)
+                        </td>
+                        <td>
+                            <partial name="_TableButtonPartial" model="item.Id" />
+                        </td>
+                    </tr>
+            }
+            </tbody>
             </table>
         }
         else
