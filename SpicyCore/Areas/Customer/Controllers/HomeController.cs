@@ -4,8 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SpicyCore.Data;
 using SpicyCore.Models;
+using SpicyCore.Models.ViewModels;
 
 namespace SpicyCore.Controllers
 {
@@ -13,15 +16,23 @@ namespace SpicyCore.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        private readonly ApplicationDbContext _db;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(ILogger<HomeController> logger, ApplicationDbContext db)
         {
             _logger = logger;
+            this._db = db;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View();
+            IndexViewModel indexVM = new IndexViewModel()
+            {
+                MenuItems = await _db.MenuItems.Include(x => x.Categories).Include(x => x.SubCategories).ToListAsync(),
+                Categories = await _db.Categories.ToListAsync(),
+                Coupons = await _db.Coupons.Where(x => x.IsActive == true).ToListAsync()
+            };
+            return View(indexVM);
         }
 
         public IActionResult Privacy()
