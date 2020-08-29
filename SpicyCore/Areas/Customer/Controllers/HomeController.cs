@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using SpicyCore.Data;
 using SpicyCore.Models;
 using SpicyCore.Models.ViewModels;
+using SpicyCore.Utility;
 
 namespace SpicyCore.Controllers
 {
@@ -36,6 +37,16 @@ namespace SpicyCore.Controllers
                 Categories = await _db.Categories.ToListAsync(),
                 Coupons = await _db.Coupons.Where(x => x.IsActive == true).ToListAsync()
             };
+
+            var claimsIdentity = (ClaimsIdentity)User.Identity;
+            var claim = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (claim != null)
+            {
+                var count = _db.ShoppingCarts.Where(x => x.ApplicationUserId == claim.Value).ToList().Count;
+                HttpContext.Session.SetInt32(SD.ssShoppingCartCount, count);
+            }
+
             return View(indexVM);
         }
 
@@ -85,7 +96,7 @@ namespace SpicyCore.Controllers
                 await _db.SaveChangesAsync();
 
                 var count = _db.ShoppingCarts.Where(x => x.ApplicationUserId == cart.ApplicationUserId).ToList().Count();
-                HttpContext.Session.SetInt32("ssCartCount", count);
+                HttpContext.Session.SetInt32(SD.ssShoppingCartCount, count);
                 return RedirectToAction("Index");
             }
             else

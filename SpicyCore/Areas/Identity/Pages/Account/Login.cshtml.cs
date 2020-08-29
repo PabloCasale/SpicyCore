@@ -11,6 +11,11 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using SpicyCore.Data;
+using Microsoft.EntityFrameworkCore;
+using SpicyCore.Models;
+using Microsoft.AspNetCore.Http;
+using SpicyCore.Utility;
 
 namespace SpicyCore.Areas.Identity.Pages.Account
 {
@@ -18,14 +23,16 @@ namespace SpicyCore.Areas.Identity.Pages.Account
     public class LoginModel : PageModel
     {
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly ApplicationDbContext _db;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly ILogger<LoginModel> _logger;
 
         public LoginModel(SignInManager<IdentityUser> signInManager, 
             ILogger<LoginModel> logger,
-            UserManager<IdentityUser> userManager)
+            UserManager<IdentityUser> userManager, ApplicationDbContext db)
         {
             _userManager = userManager;
+            this._db = db;
             _signInManager = signInManager;
             _logger = logger;
         }
@@ -82,6 +89,11 @@ namespace SpicyCore.Areas.Identity.Pages.Account
                 var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
                 if (result.Succeeded)
                 {
+                    var user = await _db.Users.Where(x => x.Email == Input.Email).FirstOrDefaultAsync();
+                    List<ShoppingCart> shoppCarts = await _db.ShoppingCarts.Where(x => x.ApplicationUserId == user.Id).ToListAsync();
+
+                    HttpContext.Session.SetInt32(SD.ssShoppingCartCount, shoppCarts.Count);
+
                     _logger.LogInformation("User logged in.");
                     return LocalRedirect(returnUrl);
                 }
