@@ -2,7 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.NetworkInformation;
+using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -34,6 +38,75 @@ namespace SpicyCore.Controllers
             };
             return View(indexVM);
         }
+
+
+        [Authorize]
+        public async Task<IActionResult> Details(int id)
+        {
+            var menuItemsFromDb = await _db.MenuItems
+                .Include(x => x.Categories)
+                .Include(x => x.SubCategories)
+                .Where(x => x.Id == id)
+                .FirstOrDefaultAsync();
+
+            ShoppingCart cart = new ShoppingCart()
+            {
+                MenuItem = menuItemsFromDb,
+                MenuItemId = menuItemsFromDb.Id
+            };
+
+            return View(cart);
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Details(ShoppingCart cart)
+        {
+            cart.Id = 0;
+            if (ModelState.IsValid)
+            {
+                var claimsIdentity = (ClaimsIdentity)this.User.Identity;
+                var claim = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
+                cart.ApplicationUserId = claim.Value;
+
+                ShoppingCart cartFromDb = await _db.ShoppingCarts
+                                            .Where(x => x.ApplicationUserId == cart.ApplicationUserId
+                                            && x.MenuItemId == cart.MenuItemId)
+                                            .FirstOrDefaultAsync();
+                if (cartFromDb == null)
+                {
+                    await _db.ShoppingCarts.AddAsync(cart);
+                }
+                else
+                {
+                    cartFromDb.Count += cart.Count;
+                }
+                await _db.SaveChangesAsync();
+
+                var count = _db.ShoppingCarts.Where(x => x.ApplicationUserId == cart.ApplicationUserId).ToList().Count();
+                HttpContext.Session.SetInt32("ssCartCount", count);
+                return RedirectToAction("Index");
+            }
+            else
+            {
+                var menuItemsFromDb = await _db.MenuItems
+                .Include(x => x.Categories)
+                .Include(x => x.SubCategories)
+                .Where(x => x.Id == cart.MenuItemId)
+                .FirstOrDefaultAsync();
+
+                ShoppingCart cartObj = new ShoppingCart()
+                {
+                    MenuItem = menuItemsFromDb,
+                    MenuItemId = menuItemsFromDb.Id
+                };
+
+                return View(cartObj);
+            }
+
+        }
+
 
         public IActionResult Privacy()
         {
